@@ -1,0 +1,15 @@
+version: "3.2"
+
+services:
+  node-dev: &node
+    build: docker
+    volumes:
+      - ./src:/app/:delegated
+    hostname: node
+    privileged: true
+    stdin_open: true
+    tty: true
+  node-stg:
+    <<: *node
+  node-prd:
+    <<: *node
