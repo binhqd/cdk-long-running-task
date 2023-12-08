@@ -8,4 +8,5 @@ export type ParamConfig = {
   availabilityZones: string[];
   publicSubnetIds: string[];
   existingS3: string;
+  existingS3ForBatch: string;
 }

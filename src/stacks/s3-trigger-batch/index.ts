@@ -8,11 +8,11 @@ const path = require('path');
 
 import { ParamConfig } from '../../configs/parameters/type';
 
-interface S3TriggerProps extends StackProps {
+interface S3TriggerBatchProps extends StackProps {
 }
 
-export default class S3TriggerStack extends cdk.Stack {
-  constructor(scope: cdk.App, id: string, { ...props }: S3TriggerProps) {
+export default class S3TriggerBatchStack extends cdk.Stack {
+  constructor(scope: cdk.App, id: string, { ...props }: S3TriggerBatchProps) {
     super(scope, id, props);
 
     const env = this.node.tryGetContext('env');
@@ -22,10 +22,9 @@ export default class S3TriggerStack extends cdk.Stack {
       appConfig = require(`../../configs/parameters/${env}-parameters.ts`).default;
     }
 
-    const existingBucket = s3.Bucket.fromBucketName(this, 'ExistingS3Bucket', appConfig.existingS3);
+    const existingBucket = s3.Bucket.fromBucketName(this, 'ExistingS3Bucket', appConfig.existingS3ForBatch);
 
-    const stateMachineArn = cdk.Fn.importValue('StateMachineArn');
-    const lambdaName = "FargateTaskLambdaS3TriggerStepFunction";
+    const lambdaName = "FargateTaskLambdaS3TriggerBatchBatch";
 
     // Create a Lambda execution role
     const lambdaExecutionRole = new iam.Role(this, 'S3LambdaTriggerExecutionRole', {
@@ -34,8 +33,12 @@ export default class S3TriggerStack extends cdk.Stack {
 
     // Attach the required permissions to the Lambda execution role
     lambdaExecutionRole.addToPolicy(new iam.PolicyStatement({
-      actions: ['states:StartExecution'],
-      resources: [stateMachineArn],
+      actions: [
+        "batch:SubmitJob",
+        "batch:DescribeJobs",
+        "batch:ListJobs"
+      ],
+      resources: ['*'], // replace with batch queue and batch job ARN
     }));
 
     // Grant permissions for CloudWatch Logs
@@ -44,14 +47,17 @@ export default class S3TriggerStack extends cdk.Stack {
       resources: [`arn:aws:logs:${appConfig.region}:${appConfig.accountId}:log-group:/aws/lambda/${lambdaName}*:*`],
     }));
 
+    const jobQueueArn = cdk.Fn.importValue('BatchJobQueueARN');
+    const jobDefinitionArn = cdk.Fn.importValue('BatchJobDefinitionARN');
+
     // Create a Lambda function to execute the Step Functions state machine
     const lambdaTrigger = new lambda.Function(this, lambdaName, {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
       // environment
       environment: {
-        STATE_MACHINE_ARN: stateMachineArn,
-        APP_REGION: appConfig.region,
+        JOB_QUEUE: jobQueueArn,
+        JOB_DEFINITION: jobDefinitionArn,
       },
       code: lambda.Code.fromAsset(path.join(__dirname, 'lambda')),
       role: lambdaExecutionRole,

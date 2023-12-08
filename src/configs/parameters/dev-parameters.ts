@@ -10,7 +10,8 @@ const config: ParamConfig = {
   efsAccessPointId: '',
   availabilityZones: [`${region}c`, `${region}a`],
   publicSubnetIds: [],
-  existingS3: ''
+  existingS3: '',
+  existingS3ForBatch: ''
 }
 
 export default config;

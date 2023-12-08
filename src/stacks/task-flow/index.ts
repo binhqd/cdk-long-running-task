@@ -8,7 +8,6 @@ import * as stepfunctions from 'aws-cdk-lib/aws-stepfunctions';
 import {
   IVpc
 } from "aws-cdk-lib/aws-ec2";
-import { ParamConfig } from '../../configs/parameters/type';
 import FargateTaskService from './fargate-tasks';
 
 interface TaskFlowProps extends StackProps {
@@ -17,39 +16,9 @@ interface TaskFlowProps extends StackProps {
   vpc: IVpc;
 }
 
-interface StateMachineDefinition {
-  Comment: string;
-  StartAt: string;
-  TimeoutSeconds: number;
-  States: {
-    [key: string]: StateDefinition;
-  };
-}
-
-interface StateDefinition {
-  Type: string;
-  Resource: string;
-  Parameters?: {
-    [key: string]: any;
-  };
-  Next?: string;
-  Catch?: {
-    ErrorEquals: string[];
-    Next: string;
-  }[];
-  End?: boolean;
-}
-
 export default class TaskFlowService extends cdk.Stack {
   constructor(scope: cdk.App, id: string, { ...props }: TaskFlowProps) {
     super(scope, id, props);
-
-    const env = this.node.tryGetContext('env');
-
-    let appConfig: ParamConfig = require(`../../configs/parameters/dev-parameters.ts`).default;
-    if (['stg', 'prd'].includes(env)) {
-      appConfig = require(`../../configs/parameters/${env}-parameters.ts`).default;
-    }
 
     // Create an SNS Topic for "Notify on Start"
     const notifyOnStartTopic = new sns.Topic(this, 'NotifyOnStartTopic', {
@@ -181,6 +150,12 @@ export default class TaskFlowService extends cdk.Stack {
               }
             }
           },
+          "ResultSelector": {
+            "OriginalOrderId.$": "$.orderId",
+            "CustomMessage": "Task completed successfully"
+          },
+          "ResultPath": "$.NotifySuccessResult",
+          "OutputPath": "$.NotifySuccessResult",
           "Next": "Notify Success",
           "Catch": [
             {
@@ -198,6 +173,7 @@ export default class TaskFlowService extends cdk.Stack {
             "Message": "AWS Fargate Task started by Step Functions succeeded",
             "TopicArn": notifyOnSuccessTopic.topicArn
           },
+          "ResultPath": null,
           "End": true
         },
         "Notify Failure": {

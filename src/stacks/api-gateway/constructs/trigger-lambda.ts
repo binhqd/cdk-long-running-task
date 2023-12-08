@@ -33,11 +33,12 @@ export default class LambdaTrigger extends Construct {
 
     // Create a Lambda function to execute the Step Functions state machine
     this.lambda = new lambda.Function(this, props.lambdaName, {
-      runtime: lambda.Runtime.NODEJS_14_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
       // environment
       environment: {
-        STATE_MACHINE_ARN: props.stateMachineArn
+        STATE_MACHINE_ARN: props.stateMachineArn,
+        APP_REGION: cdk.Stack.of(this).region
       },
       code: lambda.Code.fromAsset(path.join(__dirname, 'lambda')),
       role: lambdaTriggerExecutionRole,

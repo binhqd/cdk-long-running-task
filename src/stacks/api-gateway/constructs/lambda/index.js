@@ -1,23 +1,25 @@
-const AWS = require("aws-sdk");
+const { SFNClient, StartExecutionCommand } = require("@aws-sdk/client-sfn");
 
 const wait = (n) => new Promise((resolve) => setTimeout(resolve, n));
 
 exports.handler = async (event) => {
+  const appRegion = process.env.APP_REGION;
   try {
     // Read state machine ARN from environment variable
     const stateMachineArn = process.env.STATE_MACHINE_ARN;
 
-    // Create StepFunctions SDK client
-    const stepFunctions = new AWS.StepFunctions();
+    // Initialize the Step Functions client
+    const client = new SFNClient({ region: appRegion }); // replace 'your-region' with your AWS region
 
-    await wait(30);
+    // Uncomment the wait line if needed
+    // await wait(30);
 
-    const execution = await stepFunctions
-      .startExecution({
-        stateMachineArn,
-        input: JSON.stringify(event),
-      })
-      .promise();
+    const command = new StartExecutionCommand({
+      stateMachineArn,
+      input: JSON.stringify(event),
+    });
+
+    const execution = await client.send(command);
 
     // If the execution was successful, respond with a success message and status
     return {

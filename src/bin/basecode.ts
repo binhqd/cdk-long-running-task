@@ -3,8 +3,10 @@ import * as cdk from 'aws-cdk-lib';
 import 'source-map-support/register';
 import { ParamConfig } from '../configs/parameters/type';
 import ApiGatewayTriggerStack from '../stacks/api-gateway';
+import TaskWithBatchService from '../stacks/aws-batch';
 import { ECSCluster } from '../stacks/cluster';
 import S3TriggerStack from '../stacks/s3-trigger';
+import S3TriggerBatchStack from '../stacks/s3-trigger-batch';
 import TaskFlowService from '../stacks/task-flow';
 import { ExistingVPCStack } from '../stacks/vpc/existingVPC';
 
@@ -47,3 +49,15 @@ const apiGatewayTriggerStack = new ApiGatewayTriggerStack(app, 'ApiGatewayTrigge
   },
 });
 apiGatewayTriggerStack.addDependency(stateMachine)
+
+const batchStack = new TaskWithBatchService(app, 'TaskWithBatchStack', {
+  vpc: vpcStack.vpc,
+  cluster: clusterStack.cluster
+});
+batchStack.addDependency(vpcStack);
+batchStack.addDependency(clusterStack);
+
+const s3TriggerBatchStack = new S3TriggerBatchStack(app, 'S3TriggerBatchStack', {});
+s3TriggerBatchStack.addDependency(batchStack);
+
+

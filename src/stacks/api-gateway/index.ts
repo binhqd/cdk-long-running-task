@@ -3,7 +3,6 @@ import { StackProps } from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 const path = require('path');
 
-import { ParamConfig } from '../../configs/parameters/type';
 import LambdaEndCheck from './constructs/end-check-lambda';
 import LambdaTrigger from './constructs/trigger-lambda';
 
@@ -37,13 +36,6 @@ export default class ApiGatewayTriggerStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, { ...props }: ApiGatewayTriggerProps) {
     super(scope, id, props);
 
-    const env = this.node.tryGetContext('env');
-
-    let appConfig: ParamConfig = require(`../../configs/parameters/dev-parameters.ts`).default;
-    if (['stg', 'prd'].includes(env)) {
-      appConfig = require(`../../configs/parameters/${env}-parameters.ts`).default;
-    }
-
     const api = new apigateway.RestApi(this, 'APIGatewayTriggerStepFunction');
 
     // API Endpoint 1: Trigger StepFunction using Lambda
@@ -63,11 +55,10 @@ export default class ApiGatewayTriggerStack extends cdk.Stack {
     // API Endpoint 2: Check status of StepFunction
     const endCheckEndpoint = api.root.addResource('end-check');
     const lambdaEndCheck = new LambdaEndCheck(this, "LambdaEndCheckConstruct", {
-      stateMachineArn,
       stateMachineName,
       lambdaName: "LambdaEndCheckStepFunction"
     });
-    const endCheckIntegration = endCheckEndpoint.addMethod('GET', new apigateway.LambdaIntegration(lambdaEndCheck.lambda), {
+    endCheckEndpoint.addMethod('GET', new apigateway.LambdaIntegration(lambdaEndCheck.lambda), {
       apiKeyRequired: true,
       requestParameters: {
         'method.request.querystring.executionArn': true,

@@ -6,7 +6,6 @@ import { Construct } from 'constructs';
 const path = require('path');
 
 interface LambdaEndCheckProps extends StackProps {
-  stateMachineArn: string;
   stateMachineName: string;
   lambdaName: string;
 }
@@ -22,7 +21,7 @@ export default class LambdaEndCheck extends Construct {
 
     // Attach the required permissions to the Lambda execution role
     lambdaEndCheckExecutionRole.addToPolicy(new iam.PolicyStatement({
-      actions: ['states:DescribeExecution'],
+      actions: ['states:DescribeExecution', 'states:GetExecutionHistory'],
       resources: [
         `arn:aws:states:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:execution:${props.stateMachineName}*:*`
       ],
@@ -36,11 +35,10 @@ export default class LambdaEndCheck extends Construct {
 
     // Create a Lambda function to execute the Step Functions state machine
     this.lambda = new lambda.Function(this, props.lambdaName, {
-      runtime: lambda.Runtime.NODEJS_14_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'check-status.handler',
-      // environment
       environment: {
-        STATE_MACHINE_ARN: props.stateMachineArn
+        APP_REGION: cdk.Stack.of(this).region
       },
       code: lambda.Code.fromAsset(path.join(__dirname, 'lambda')),
       role: lambdaEndCheckExecutionRole,
